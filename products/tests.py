@@ -345,9 +345,196 @@ class ProductAPITests(APITestCase):
         self.assertEqual(response.data["count"], 13)
         self.assertEqual(len(response.data["results"]), 10)
         self.assertIsNotNone(response.data["next"])
+        
+    def test_user_registration(self):
+        data = {
+            "username": "newuser",
+            "email": "newuser@example.com",
+            "password": "StrongPassword123!",
+            }
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+            )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+        self.assertTrue(
+            User.objects.filter(username="newuser").exists()
+            )
+        
+        self.assertNotIn("password", response.data)
+        
+    def test_registration_with_existing_username(self):
+        data = {
+            "username": "testuser",
+            "email": "another@example.com",
+            "password": "StrongPassword123!",
+            }
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+            )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            )
+        
+        self.assertIn("username", response.data)
+        
+    def test_registration_with_existing_email(self):
+        data = {
+            "username": "anotheruser",
+            "email": "testuser@example.com",
+            "password": "StrongPassword123!",
+            }
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+            )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            )
+        
+        self.assertIn("email", response.data)
+        
+    def test_registration_with_weak_password(self):
+        data = {
+            "username": "weakuser",
+            "email": "weak@example.com",
+            "password": "123",
+            } 
+        
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+        )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        
+        self.assertIn("password", response.data)
+        
+    def test_registration_without_password(self):
+        data = {
+        "username": "nopassword",
+        "email": "nopassword@example.com",
+        }
+        
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+            )
+                
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            )
+                
+        self.assertIn("password", response.data)
+        
+        
+    def test_registration_password_is_hashed(self):
+        data = {
+            "username": "hashuser",
+            "email": "hash@example.com",
+            "password": "StrongPassword123!",
+            }
+        
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+            )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+        
+        user = User.objects.get(username = "hashuser")
+        
+        self.assertNotEqual(
+           user.password,
+           "StrongPassword123!",
+        )
+        
+        self.assertTrue(
+            user.check_password("StrongPassword123!")
+        )
+        
+    def test_registered_user_is_not_admin(self):
+        data = {
+            "username": "regularnew",
+            "email": "regularnew@example.com",
+            "password": "StrongPassword123!",
+            }
+        
+        
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format = "json"
+        )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_201_CREATED,
+        )
+        
+        user = User.objects.get(username="regularnew")
+        
+        self.assertFalse(user.is_staff)
+        self.assertFalse(user.is_superuser)
+        self.assertTrue(user.is_active)
+        
+    def test_registration_with_invalid_email(self):
+        data = {
+            "username": "invalidemail",
+            "email": "not-an-email",
+            "password": "StrongPassword123!",
+            }
+        
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json"
+        )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+        )
+        
+        self.assertIn("email", response.data)
 
-
-    
+    def test_registration_with_email_different_case(self):
+        data = {
+            "username": "anotheruser",
+            "email": "TESTUSER@EXAMPLE.COM",
+            "password": "StrongPassword123!",
+            }
+        response = self.client.post(
+            "/api/register/",
+            data,
+            format="json",
+            )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_400_BAD_REQUEST,
+            )
+        
+        self.assertIn("email", response.data)
 
 
 

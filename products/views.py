@@ -3,7 +3,7 @@ from django_filters import rest_framework as filters
 from rest_framework.permissions import AllowAny, IsAdminUser
 from rest_framework import generics
 from .models import Product
-from .serializers import ProductSerializer
+from .serializers import ProductSerializer, RegistrationSerializer
 
 
 class ProductFilter(filters.FilterSet):
@@ -42,4 +42,8 @@ class ProductDetailView(generics.RetrieveUpdateDestroyAPIView):
             return [IsAdminUser()]
         return [AllowAny()]
     
+    
+class RegistrationView(generics.CreateAPIView):
+    serializer_class = RegistrationSerializer
+    permission_classes = [AllowAny]
     

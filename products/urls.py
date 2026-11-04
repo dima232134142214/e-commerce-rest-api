@@ -1,7 +1,7 @@
 
 
 from django.urls import path
-from .views import ProductListCreateView, ProductDetailView
+from .views import ProductListCreateView, ProductDetailView, RegistrationView
 from drf_spectacular.views import (
     SpectacularAPIView,
     SpectacularSwaggerView,
@@ -9,6 +9,7 @@ from drf_spectacular.views import (
 )
 
 urlpatterns = [
+    path("register/", RegistrationView.as_view(), name="register"),
     path("products/", ProductListCreateView.as_view(), name='product-list'),
     path("products/<int:pk>/", ProductDetailView.as_view(), name="product-detail"),
 ]
