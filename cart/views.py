@@ -110,3 +110,14 @@ class CartItemDetailView(APIView):
             CartItemSerializer(cart_item).data,
             status=status.HTTP_200_OK,
         )
+        
+    def delete(self, request, pk):
+        cart_item = get_object_or_404(
+            CartItem,
+            pk=pk,
+            cart__user=request.user,
+        )
+        
+        cart_item.delete()
+        
+        return Response(status=status.HTTP_204_NO_CONTENT)
