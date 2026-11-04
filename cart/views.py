@@ -7,6 +7,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import Cart, CartItem
 from .serializers import CartSerializer, CartItemSerializer
+from django.shortcuts import get_object_or_404
 
 
 class CartView(APIView):
@@ -68,5 +69,44 @@ class CartItemAddView(APIView):
             CartItemSerializer(cart_item).data,
             status=status.HTTP_201_CREATED,
         )
-            
+
+class CartItemDetailView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    
+    def patch(self, request, pk):
         
+        cart_item = get_object_or_404(
+            CartItem,
+            pk=pk,
+            cart__user=request.user,
+        )
+        
+        serializer = CartItemSerializer(
+            cart_item,
+            data=request.data,
+            partial=True,
+        )
+        
+        serializer.is_valid(raise_exception=True)
+        
+        new_quantity = serializer.validated_data.get(
+            "quantity",
+            cart_item.quantity,
+        )
+        
+        if new_quantity > cart_item.product.stock:
+            return Response(
+                {
+                    "error": f"Available stock: {cart_item.product.stock}"
+                },
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        cart_item.quantity = new_quantity
+        cart_item.save(update_fields=["quantity", "updated_at"])
+        
+        return Response(
+            CartItemSerializer(cart_item).data,
+            status=status.HTTP_200_OK,
+        )
