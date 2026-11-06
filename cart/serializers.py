@@ -6,7 +6,7 @@ from products.serializers import ProductSerializer
 from .models import Cart, CartItem
 
 
-class CartItemSerializer(serializers.ModelSerializer):
+class CartItemSerializer(serializers. ModelSerializer):
     
     product = ProductSerializer(read_only=True)
     

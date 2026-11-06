@@ -58,6 +58,7 @@ class CartItemAddView(APIView):
             existing_item.quantity = new_quantity
             existing_item.save(update_fields=["quantity", "updated_at"])
             cart_item = existing_item
+            response_status = status.HTTP_200_OK
         else:
             cart_item = CartItem.objects.create(
                 cart=cart,
@@ -65,9 +66,13 @@ class CartItemAddView(APIView):
                 quantity=quantity,
             )
             
+            response_status = status.HTTP_201_CREATED
+            
+        serializer = CartItemSerializer(cart_item)
+    
         return Response(
-            CartItemSerializer(cart_item).data,
-            status=status.HTTP_201_CREATED,
+            serializer.data,
+            status=response_status,
         )
 
 class CartItemDetailView(APIView):
