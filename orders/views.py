@@ -18,9 +18,10 @@ class CheckoutView(APIView):
         
         order = create_order_from_cart(request.user)
         
-        serializer = OrderSerializer
+        
+        serializer = OrderSerializer(order)
         
         return Response(
             serializer.data,
-            status=status.HTTP_201.CREATED,
+            status=status.HTTP_201_CREATED,
         )
