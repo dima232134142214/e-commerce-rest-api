@@ -2,11 +2,28 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth.password_validation import validate_password
 from rest_framework import serializers
 
-from .models import Product
+from .models import Product, Category
 
 User = get_user_model()
 
+
+class CategorySerializer(serializers.ModelSerializer):
+    
+    class Meta:
+        model = Category
+        fields = ["id", "name", "slug", "description", "created_at"]
+        read_only_fields = ["id", "created_at"]
+
 class ProductSerializer(serializers.ModelSerializer):
+    category = CategorySerializer(read_only=True)
+    
+    category_id = serializers.PrimaryKeyRelatedField(
+        queryset=Category.objects.all(),
+        source='category',
+        write_only=True,
+        allow_null=True,
+        required=False,
+        )
     
     def validate_price(self, value):
         if value <= 0:
@@ -49,3 +66,5 @@ class RegistrationSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(**validated_data)
         return user
+
+
