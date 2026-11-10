@@ -6,7 +6,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
 
-from .services import create_order_from_cart
+from .services import create_order_from_cart, cancel_order
 from .serializers import OrderSerializer
 from rest_framework import generics
 
@@ -48,4 +48,21 @@ class OrderDetailView(generics.RetrieveAPIView):
             Order.objects
             .filter(user=self.request.user)
             .prefetch_related("items__product")
+        )
+
+class OrderCancelView(APIView):
+    permission_classes = [IsAuthenticated]
+    
+    def post(self, request, pk):
+        
+        order = cancel_order(
+            user=request.user,
+            order_id=pk,
+        )
+        
+        serializer = OrderSerializer(order)
+        
+        return Response(
+            serializer.data,
+            status=status.HTTP_200_OK,
         )

@@ -3,11 +3,12 @@
 from decimal import Decimal
 
 from django.db import transaction
-from rest_framework.exceptions import ValidationError
+from rest_framework.exceptions import ValidationError, NotFound
 
 from cart.models import Cart, CartItem
 from products.models import Product
 from .models import Order, OrderItem
+
 
 @transaction.atomic
 def create_order_from_cart(user):
@@ -68,5 +69,33 @@ def create_order_from_cart(user):
     )
     
     CartItem.objects.filter(cart=cart).delete()
+    
+    return order
+
+@transaction.atomic
+def cancel_order(user, order_id):
+    try:
+        order = Order.objects.select_for_update().get(
+            pk=order_id,
+            user=user,
+        )
+    except Order.DoesNotExist:
+        return NotFound("Order not found.")
+    
+    if order.status != Order.Status.PENDING: 
+        raise ValidationError("Only pending orders can be cancelled.") 
+    
+    order_items = order.items.order_by("product_id")
+    
+    for items in order_items:
+        product = Product.objects.select_for_update().get(
+            pk=items.product_id
+        )
+        
+        product.stock += items.quantity
+        product.save(update_fields=["stock"])
+    
+    order.status = Order.Status.CANCELLED
+    order.save(update_fields=["status", "updated_at"])
     
     return order
