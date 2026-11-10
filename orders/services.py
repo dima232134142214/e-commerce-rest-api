@@ -80,7 +80,7 @@ def cancel_order(user, order_id):
             user=user,
         )
     except Order.DoesNotExist:
-        return NotFound("Order not found.")
+        raise NotFound("Order not found.")
     
     if order.status != Order.Status.PENDING: 
         raise ValidationError("Only pending orders can be cancelled.") 

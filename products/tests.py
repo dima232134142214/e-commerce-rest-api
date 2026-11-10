@@ -6,6 +6,7 @@ from rest_framework.test import APITestCase
 from django.contrib.auth import get_user_model
 
 from .models import Product
+from decimal import Decimal
 
 User = get_user_model()
 
@@ -535,6 +536,87 @@ class ProductAPITests(APITestCase):
             )
         
         self.assertIn("email", response.data)
+        
+        
+    def test_filter_products_by_max_price(self):
+        response = self.client.get(
+            "/api/products/?max_price=1000"
+            )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            )
+        
+        
+        for product in response.data["results"]:
+            self.assertLessEqual(
+                Decimal(product["price"]),
+                Decimal("1000.00"),
+                )
+    
+    def test_filter_products_by_price_range(self):
+        response = self.client.get(
+            "/api/products/?min_price=500&max_price=1500"
+        )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            )
+        
+        for product in response.data["results"]:
+            price = Decimal(product["price"])
+            self.assertGreaterEqual(price, Decimal("500.00"))
+            self.assertLessEqual(price, Decimal("1500.00"))
+    
+    def test_search_products_by_description(self):
+        response = self.client.get(
+            "/api/products/?search=Test description"
+            )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            )
+        
+        self.assertTrue(
+            any(product["name"] == "Test Phone"for product in response.data["results"])
+            )
+    
+    def test_order_products_by_price_descending(self):
+        Product.objects.create(
+            name="Cheap Product",
+            description="Cheap product",
+            price="100.00",
+            stock=10,
+        )
+        response = self.client.get(
+            "/api/products/?ordering=-price"
+        )
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+        )
+        
+        prices = [Decimal(product["price"])for product in response.data["results"]]
+        
+        self.assertEqual(prices, sorted(prices, reverse=True))
+    
+    def test_filter_products_by_is_active(self):
+        Product.objects.create(
+            name="Inactive Product",
+            description="Inactive product",
+            price="500.00",
+            stock=10,
+            is_active=False,
+        )
+        
+        response = self.client.get("/api/products/?is_active=false")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK,)
+        
+        self.assertTrue(all(not product["is_active"] for product in response.data["results"]))
 
 
 

@@ -147,3 +147,57 @@ class CheckoutAPITestCase(APITestCase):
         self.assertEqual(response.data["id"], order.id)
         self.assertEqual(len(response.data["items"]), 1)
         self.assertEqual(response.data["items"][0]["quantity"], 2)
+    
+    def test_cancel_order_success(self):
+        order = Order.objects.create(
+            user=self.user,
+            total_price=Decimal("3000.00"),
+        )
+        
+        OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            quantity=2,
+            price=Decimal("1500.00"),
+            )
+        
+        self.product.stock = 8 
+        self.product.save()
+        
+        response = self.client.post(f"/api/orders/{order.id}/cancel/")
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        order.refresh_from_db()
+        self.product.refresh_from_db()
+        
+        self.assertEqual(order.status, Order.Status.CANCELLED)
+        self.assertEqual(self.product.stock, 10)
+    
+    
+    def test_cancel_order_twice(self):
+        order = Order.objects.create(
+            user=self.user,
+            total_price=Decimal("3000.00"),
+            status=Order.Status.CANCELLED,
+        )
+        
+        response = self.client.post(f"/api/orders/{order.id}/cancel/")
+        
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST,)
+    
+    
+    def test_user_cannot_cancel_another_users_order(self):
+        other_user = User.objects.create_user(
+            username="otheruser",
+            password="testpassword123",
+        )
+        
+        order = Order.objects.create(
+            user=other_user,
+            total_price=Decimal("1500.00"),
+        )
+        
+        response = self.client.post(f"/api/orders/{order.id}/cancel/")
+        
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND,)
+        
