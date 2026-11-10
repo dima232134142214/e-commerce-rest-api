@@ -90,4 +90,60 @@ class CheckoutAPITestCase(APITestCase):
         response = self.client.post("/api/orders/checkout/")
         
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
+    def test_get_order_list(self):
+        order = Order.objects.create(
+            user=self.user,
+            total_price=Decimal("3000.00"),
+            )
+        
+        response = self.client.get("/api/orders/")
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_200_OK,
+            )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["count"], 1)
+        self.assertEqual(response.data["results"][0]["id"], order.id)
+        
+    def test_user_cannot_view_another_users_order(self):
+        other_user = User.objects.create_user(
+            username="otheruser",
+            password="testpassword123",
+            )
+        
+        other_order = Order.objects.create(
+            user=other_user,
+            total_price=Decimal("1500.00"),
+            )
+        response = self.client.get(
+            f"/api/orders/{other_order.id}/"
+            )
+        
+        self.assertEqual(
+            response.status_code,
+            status.HTTP_404_NOT_FOUND,
+            )
     
+    
+    def test_get_order_detail(self):
+        order = Order.objects.create(
+            user=self.user,
+            total_price=Decimal("3000.00")
+        )
+        
+        OrderItem.objects.create(
+            order=order,
+            product=self.product,
+            quantity=2,
+            price=Decimal("1500.00"),
+        )
+        
+        response = self.client.get(
+            f"/api/orders/{order.id}/"
+        )
+        
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["id"], order.id)
+        self.assertEqual(len(response.data["items"]), 1)
+        self.assertEqual(response.data["items"][0]["quantity"], 2)
